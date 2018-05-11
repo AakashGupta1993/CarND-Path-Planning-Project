@@ -164,35 +164,9 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
 
 }
 
-bool CheckLeftLane(int lane, vector<vector<double> > car_track, vector<vector<double> > sensor_fusion, int path_size, double car_s){
+bool ChangeLane(int lane, vector<vector<double> > car_track, vector<vector<double> > sensor_fusion, int path_size, double car_s, int lane_change){
 	
-	int lane_to_check = lane - 1;
-	
-	for(int i = 0 ; i < car_track[lane_to_check].size(); i ++){ //loop for 0,1 and 2 lane numbers
-	
-		double vx = sensor_fusion[car_track[lane_to_check][i]][3];
-		double vy = sensor_fusion[car_track[lane_to_check][i]][4];
-		double check_speed = sqrt((vx*vx)+(vy*vy));
-		double check_car_s = sensor_fusion[car_track[lane_to_check][i]][5];
-		
-		check_car_s += ((double)path_size*0.02*check_speed); //if using previous points can project s value out
-		//check if the car is in front of us and also if the gap is less than 30 or not
-		
-		if((check_car_s < car_s) && ((car_s - check_car_s) < 10)){
-			return false;
-		}
-		if( (check_car_s > car_s) && ((check_car_s - car_s) < 30)){
-			return false;
-		}
-		
-	}
-	
-	return true;
-}
-
-bool CheckRightLane(int lane, vector<vector<double> > car_track, vector<vector<double> > sensor_fusion, int path_size, double car_s){
-	
-	int lane_to_check = lane + 1;
+	int lane_to_check = lane + lane_change;
 	
 	for(int i = 0 ; i < car_track[lane_to_check].size(); i ++){ //loop for 0,1 and 2 lane numbers
 	
@@ -215,7 +189,6 @@ bool CheckRightLane(int lane, vector<vector<double> > car_track, vector<vector<d
 	
 	return true;
 }
-
 
 int main() {
   uWS::Hub h;
@@ -304,8 +277,10 @@ int main() {
 			bool print_statements = false;
 			int path_size = previous_path_x.size();
 			
-			cout<<endl;
-		
+			if (print_statements){
+				cout<<endl;
+			}
+			
 			if(path_size > 0){
 				car_s = end_path_s;
 			}
@@ -360,30 +335,30 @@ int main() {
 				if((check_car_s > car_s ) && ((check_car_s - car_s) < 30)){
 					//ref_vel = 29;
 					too_close = true;
-					/*if(lane > 0){
-						lane = 0;
-					}*/
 					break;
 				}
 			}
 			
+			int lane_change = 0;
 			if(too_close){	
 				switch(lane){
 					
+					//lane_change = lane_change +1 if shifting to right
+					//lane_change = lane_change -1 if shifting to left
 					case 0:
-						if (CheckRightLane(lane,car_track,sensor_fusion,path_size, car_s)){
+						if (ChangeLane(lane,car_track,sensor_fusion,path_size, car_s,lane_change+=1)){
 							lane = 1;
 						}
 						break;
 					case 1:
-						if (CheckLeftLane(lane,car_track,sensor_fusion, path_size, car_s)){
+						if (ChangeLane(lane,car_track,sensor_fusion, path_size, car_s,lane_change-=1)){
 							lane = 0;
-						}else if (CheckRightLane(lane,car_track,sensor_fusion, path_size, car_s)){
+						}else if (ChangeLane(lane,car_track,sensor_fusion,path_size, car_s,lane_change+=1)){
 							lane = 2;
 						}
 						break;
 					case 2:
-						if (CheckLeftLane(lane,car_track,sensor_fusion, path_size, car_s)){
+						if (ChangeLane(lane,car_track,sensor_fusion, path_size, car_s,lane_change-=1)){
 							lane = 1;
 						}
 						break;
